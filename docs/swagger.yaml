@@ -1,0 +1,120 @@
+basePath: /
+definitions:
+  exception.ErrorMessage:
+    properties:
+      code:
+        example: 401
+        type: integer
+      details:
+        example: Error description
+        type: string
+      error:
+        example: true
+        type: boolean
+      message:
+        example: Something happened...
+        type: string
+      origin:
+        example: File and Line of given error
+        type: string
+    type: object
+  gorm.DeletedAt:
+    properties:
+      time:
+        type: string
+      valid:
+        description: Valid is true if Time is not NULL
+        type: boolean
+    type: object
+  models.User:
+    properties:
+      createdAt:
+        type: string
+      deletedAt:
+        $ref: '#/definitions/gorm.DeletedAt'
+      id:
+        type: integer
+      name:
+        example: Ada
+        type: string
+      updatedAt:
+        type: string
+      username:
+        example: username@test.com
+        type: string
+    type: object
+host: localhost:3000
+info:
+  contact:
+    email: fiber@swagger.io
+    name: API Support
+  description: This is a sample swagger for Fiber
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  termsOfService: http://swagger.io/terms/
+  title: Fiber Example API
+  version: "1.0"
+paths:
+  /api/login:
+    post:
+      consumes:
+      - application/json
+      description: Do Login.
+      parameters:
+      - description: Json message
+        in: body
+        name: payload
+        required: true
+        schema:
+          example: "{\r\n    \"username\":\"jhonatan@test.com\",\r\n    \"password\":\"123456\"\r\n}"
+          type: string
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/exception.ErrorMessage'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/exception.ErrorMessage'
+      summary: Do Login.
+      tags:
+      - Auth
+  /api/v1/users:
+    get:
+      consumes:
+      - application/json
+      description: Retrieve all users.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.User'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/exception.ErrorMessage'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/exception.ErrorMessage'
+      summary: Retrieve all users.
+      tags:
+      - User
+swagger: "2.0"

@@ -3,12 +3,22 @@ package controller
 import (
 	"getjv/backend/app/http/exception"
 	"getjv/backend/app/http/request"
-	"getjv/backend/app/http/resource/users"
+	resource "getjv/backend/app/http/resource/users"
 	"getjv/backend/app/http/service"
 
 	"github.com/gofiber/fiber/v2"
 )
 
+// UserIndex func gets users.
+// @Description Retrieve all users.
+// @Summary Retrieve all users.
+// @Tags User
+// @Accept json
+// @Produce json
+// @Success 200 {array} models.User
+// @Failure 401  {object}  exception.ErrorMessage
+// @Failure 503  {object}  exception.ErrorMessage
+// @Router /api/v1/users [get]
 func UserIndex(c *fiber.Ctx) error {
 	
 	// Get all users.

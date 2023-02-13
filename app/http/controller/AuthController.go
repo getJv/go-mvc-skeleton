@@ -1,82 +1,83 @@
 package controller
 
 import (
+	"getjv/backend/app/http/exception"
+	"getjv/backend/app/http/request"
+	resource "getjv/backend/app/http/resource/users"
+	"getjv/backend/app/http/service"
 	"getjv/backend/kernel"
-	"os"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/golang-jwt/jwt"
 )
 
-// TokenMetadata struct to describe metadata in JWT.
-type TokenMetadata struct {
-	Expires int64
+func AuthSignUp(c *fiber.Ctx) error  {
+	
+	user,validationErr := request.SignupPostRequest(c)
+	if validationErr.Error {
+	   return exception.ErrorResponse(c,validationErr)
+	}
+ 	
+	_, serviceErr := service.UserAdd(c,&user)
+	if serviceErr.Error {
+		return exception.ErrorResponse(c,serviceErr)
+	}
+	
+	return resource.UserResource(c,user);
 }
 
-func GetNewAccessToken(c *fiber.Ctx) error {
-	// Generate a new Access token.
-	token, err := kernel.GenerateNewAccessToken()
-	if err != nil {
-		// Return status 500 and token generation error.
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": true,
-			"msg":   err.Error(),
-		})
+// AuthLogin Do Login.
+// @Description Do Login.
+// @Summary Do Login.
+// @Tags Auth
+// @Param payload body string true "Json message" SchemaExample({\r\n    "username":"jhonatan@test.com",\r\n    "password":"123456"\r\n})
+// @Param        id   path      int  true  "Account ID"
+// @Accept json
+// @Produce json
+// @Success 200 {object}	models.User
+// @Failure 401 {object}	exception.ErrorMessage
+// @Failure 503 {object}	exception.ErrorMessage
+// @Router /api/login [post]
+func AuthLogin(c *fiber.Ctx) error  {
+	
+	userRequest,validationErr := request.AuthPostLoginRequest(c)
+	if validationErr.Error {
+	   return exception.ErrorResponse(c,validationErr)
+	}
+ 	
+	localUser, serviceErr := service.UserFindByEmail(c,userRequest.Username)
+	if serviceErr.Error {
+		return exception.ErrorResponse(c,serviceErr)
 	}
 
-	return c.JSON(fiber.Map{
-		"error":        false,
-		"msg":          nil,
-		"access_token": token,
-	})
-}
-
-// ExtractTokenMetadata func to extract metadata from JWT.
-func ExtractTokenMetadata(c *fiber.Ctx) (*TokenMetadata, error) {
-	token, err := verifyToken(c)
-	if err != nil {
-		return nil, err
+	authErr := kernel.ComparePassword(localUser.Password,userRequest.Password)
+	if authErr != nil{
+		return exception.ErrorResponse(c,exception.UnAuthMessage())
 	}
 
-	// Setting and checking token and credentials.
-	claims, ok := token.Claims.(jwt.MapClaims)
-	if ok && token.Valid {
-		// Expires time.
-		expires := int64(claims["exp"].(float64))
-
-		return &TokenMetadata{
-			Expires: expires,
-		}, nil
+	token,errToken := kernel.GenerateToken(localUser)
+	if errToken != nil{
+		return exception.ErrorResponse(c,exception.ServerMessage(errToken))
 	}
 
-	return nil, err
-}
-
-func extractToken(c *fiber.Ctx) string {
-	bearToken := c.Get("Authorization")
-
-	// Normally Authorization HTTP header.
-	onlyToken := strings.Split(bearToken, " ")
-	if len(onlyToken) == 2 {
-		return onlyToken[1]
+	errCookie := kernel.SaveAuthCookie(c,token)
+	if errCookie != nil{
+		return exception.ErrorResponse(c,exception.ServerMessage(errCookie))
 	}
-
-	return ""
+	
+	return resource.AuthResource(c,localUser,token);
 }
 
-func verifyToken(c *fiber.Ctx) (*jwt.Token, error) {
-	tokenString := extractToken(c)
 
-	token, err := jwt.Parse(tokenString, jwtKeyFunc)
-	if err != nil {
-		return nil, err
+func AuthValidate(c *fiber.Ctx) error  {
+	
+	authUser,errAuthUser := kernel.GetAuthUser(c)
+	if errAuthUser != nil{
+		return exception.ErrorResponse(c,exception.UnAuthMessage())
 	}
-
-	return token, nil
+	
+	return resource.UserResource(c, authUser)
 }
 
-func jwtKeyFunc(token *jwt.Token) (interface{}, error) {
-	return []byte(os.Getenv("JWT_SECRET_KEY")), nil
-}
+
+
 

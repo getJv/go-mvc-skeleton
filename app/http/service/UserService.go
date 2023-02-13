@@ -56,3 +56,15 @@ func UserUpdate(c *fiber.Ctx, user *models.User ) ( models.User,exception.ErrorM
 	return *user,exception.ErrorMessage{}
 }
 
+func UserFindByEmail(c *fiber.Ctx,email string ) ( models.User,exception.ErrorMessage)  {
+	var user models.User		
+	result := kernel.DB.Find(&user,"username = ?", email)
+	if result.Error != nil{
+		return models.User{},exception.DatabaseMessage(result.Error)
+	}
+	if result.RowsAffected == 0{
+		return models.User{},exception.NotFoundMessage()
+	}
+	return user,exception.ErrorMessage{}
+}
+
